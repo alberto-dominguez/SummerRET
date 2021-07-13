@@ -14,10 +14,24 @@ WORLD_HEIGHT = 10
 # world width
 WORLD_WIDTH = 10
 
-# wind strength
-# TODO - Convert to a full grid
-WIND_X = [0, 0, 0, 1, 1, 1, 2, 2, 1, 0]
-WIND_Y = [1, 1, 1, 0, 0, 0, 0, 0, 0, 1]
+# initialize wind strength matrices to 0
+WIND_X = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=int)
+WIND_Y = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=int)
+# Created a completely arbitrary wind system.
+# left edge has wind to the right (+1) and top edge has wind down (+1)
+for k in range(0, WORLD_HEIGHT):
+    WIND_X[k][0] = 1
+for k in range(1, WORLD_HEIGHT):  # start at 1 to avoid placing both WIND_X and WIND_Y in (0,0)
+    WIND_Y[0][k] = 1
+# other cells are set randomly to either the cell to the left or the cell above
+for ii in range(1, WORLD_HEIGHT):
+    for jj in range(1, WORLD_WIDTH):
+        if np.random.binomial(1, 0.5) == 1:
+            WIND_X[ii][jj] = WIND_X[ii][jj-1]
+            WIND_Y[ii][jj] = WIND_Y[ii][jj-1]
+        else:
+            WIND_X[ii][jj] = WIND_X[ii-1][jj]
+            WIND_Y[ii][jj] = WIND_Y[ii-1][jj]
 
 # possible actions
 ACTION_UP = 0
@@ -36,26 +50,37 @@ ALPHA = 0.5
 # reward for each step (what this means is we want to minimize the number of steps)
 REWARD = -1.0
 
-# Start and goal positions of the agent as shown on p. 130 of the textbook.
-START = [3, 0]
-GOAL = [3, 7]
+# Start and goal positions of the agent
+START = [0, 0]
+GOAL = [5, 9]
 ACTIONS = [ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT]
 
 
 # This function defines how the agent moves on the grid.
+# Note that for improved readability I changed the sign convention from the original code. - ALD
 def step(state, action):
+
     i, j = state
+
+    gust = 1
+    if np.random.binomial(1, 0.1) == 1:  # 10% probability of a wind gust
+        gust = 2
+    if np.random.binomial(1, 0.1) == 1:  # 10% probability of wind changing direction
+        gust = gust * -1
+
+    if np.random.binomial(1, EPSILON) == 1:
+        action = np.random.choice(ACTIONS)
     if action == ACTION_UP:
-        return [max(i - 1 - WIND_X[j], 0), max(j - WIND_Y[i], 0)]
+        return [max(min(i - 1 + WIND_X[i][j]*gust, WORLD_HEIGHT - 1), 0), max(min(j + WIND_Y[i][j]*gust, WORLD_WIDTH - 1), 0)]
     elif action == ACTION_DOWN:
-        return [max(min(i + 1 - WIND_X[j], WORLD_HEIGHT - 1), 0), max(j - WIND_Y[i], 0)]
+        return [max(min(i + 1 + WIND_X[i][j]*gust, WORLD_HEIGHT - 1), 0), max(min(j + WIND_Y[i][j]*gust, WORLD_WIDTH - 1), 0)]
     elif action == ACTION_LEFT:
-        return [max(i - WIND_X[j], 0), max(j - 1 - WIND_Y[i], 0)]
+        return [max(min(i + WIND_X[i][j]*gust, WORLD_HEIGHT - 1), 0), max(min(j - 1 + WIND_Y[i][j]*gust, WORLD_WIDTH - 1), 0)]
     elif action == ACTION_RIGHT:
-        return [max(i - WIND_X[j], 0), max(min(i + 1 - WIND_Y[i], WORLD_WIDTH - 1), 0)]
-    # TODO - Add diagonal actions (need to think about the dynamics/geometry)
+        return [max(min(i + WIND_X[i][j]*gust, WORLD_HEIGHT - 1), 0), max(min(j + 1 + WIND_Y[i][j]*gust, WORLD_WIDTH - 1), 0)]
+    # Per discussion with Paulo, we are ignoring diagonal moves, at least for the moment, possibly always
     else:
-        assert False  # This should never happen
+        assert False  # This should never happen since all potential actions are accounted for
 
 
 # play for an episode
@@ -71,11 +96,12 @@ def episode(q_value):
     # Because we chose EPSILON = 0.1, there's a 10% chance that we select an action randomly.
     # This is represented by computing the binomial distribution with n = 1 experiment and probability
     # of occurrence epsilon = 0.1.
-    if np.random.binomial(1, EPSILON) == 1:  # ignore PyCharm compiler warning
+    if np.random.binomial(1, EPSILON) == 1:
         action = np.random.choice(ACTIONS)
     else:
-        # Most of the times (90%), we select an action greedily.
-        # That means we select the action associated with the maximum q_value found among all q_values stored in values_
+        # Most of the time (90%), we select an action greedily.
+        # We select the action associated with the maximum q_value found among all q_values stored in values_
+        # 10% of time, we select an action randomly.
         # Algorithmically:
         # for each action_ and value_ stored in values_
         #   if the variable value_ is maximum in the list values_
@@ -106,7 +132,7 @@ def episode(q_value):
 
 def figure_6_3():
     q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, 4))
-    episode_limit = 500
+    episode_limit = 5000
 
     steps = []
     ep = 0
