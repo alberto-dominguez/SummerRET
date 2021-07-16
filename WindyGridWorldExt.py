@@ -3,6 +3,9 @@
 #                                                                                                   #
 # Revision history:                                                                                 #
 # ALD 11-JUL-2021 First version, assuming heterogeneous wind conditions across each row and column  #
+# ALD 13-JUL-2021 Created wind matrix initialization and added stochastic gusts                     #
+# ALD 16-JUL-2021 Moved gust logic from individual episodes to initial matrix setup (per Paulo)     #
+#                 Changed epsilon from a hard-coded constant to a parameter for experimentation     #
 #####################################################################################################
 
 import numpy as np
@@ -15,6 +18,7 @@ WORLD_HEIGHT = 10
 WORLD_WIDTH = 10
 
 # initialize wind strength matrices to 0
+# TODO - Change dynamics wording from wind to current, matching our subject domain
 WIND_X = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=int)
 WIND_Y = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=int)
 # Created a completely arbitrary wind system.
@@ -32,17 +36,42 @@ for ii in range(1, WORLD_HEIGHT):
         else:
             WIND_X[ii][jj] = WIND_X[ii-1][jj]
             WIND_Y[ii][jj] = WIND_Y[ii-1][jj]
+# gusts
+for ii in range(0, WORLD_HEIGHT):
+    for jj in range(0, WORLD_WIDTH):
+        gust = 1
+        if np.random.binomial(1, 0.1) == 1:  # 10% probability of a wind gust
+            gust = 2
+        if np.random.binomial(1, 0.1) == 1:  # 10% probability of wind changing direction
+            gust = gust * -1
+        WIND_X[ii][jj] = WIND_X[ii][jj] * gust
+        WIND_Y[ii][jj] = WIND_Y[ii][jj] * gust
+
+# print wind grid
+print('Wind grid:')
+for ii in range(0, WORLD_HEIGHT):
+    for jj in range(0, WORLD_WIDTH):
+        wind = abs(WIND_X[ii][jj] + WIND_Y[ii][jj])  # Works because x and y are mutually exclusive
+        print(wind, end='')
+        direction = ""
+        if WIND_X[ii][jj] > 0:
+            direction = "R"
+        elif WIND_X[ii][jj] < 0:
+            direction = "L"
+        elif WIND_Y[ii][jj] > 0:
+            direction = "D"
+        elif WIND_Y[ii][jj] < 0:
+            direction = "U"
+        print(direction, end='')
+        print(" ", end='')
+    print()
 
 # possible actions
+# TODO - Rename N,S,E,W
 ACTION_UP = 0
 ACTION_DOWN = 1
 ACTION_LEFT = 2
 ACTION_RIGHT = 3
-
-# Instead of selecting the action with the highest value (greedy selection), we let the agent explore the set of
-# actions and select one of them randomly. The probability of exploration is given by epsilon.
-# The complete motivation for epsilon-greedy methods is explained on p. 27-30 of the textbook.
-EPSILON = 0.1
 
 # Sarsa step size.  Sarsa algorithm is explained on p. 129 of the textbook.
 ALPHA = 0.5
@@ -58,33 +87,28 @@ ACTIONS = [ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT]
 
 # This function defines how the agent moves on the grid.
 # Note that for improved readability I changed the sign convention from the original code. - ALD
-def step(state, action):
+def step(state, action, eps):
 
     i, j = state
 
-    gust = 1
-    if np.random.binomial(1, 0.1) == 1:  # 10% probability of a wind gust
-        gust = 2
-    if np.random.binomial(1, 0.1) == 1:  # 10% probability of wind changing direction
-        gust = gust * -1
-
-    if np.random.binomial(1, EPSILON) == 1:
+    if np.random.binomial(1, eps) == 1:
         action = np.random.choice(ACTIONS)
     if action == ACTION_UP:
-        return [max(min(i - 1 + WIND_X[i][j]*gust, WORLD_HEIGHT - 1), 0), max(min(j + WIND_Y[i][j]*gust, WORLD_WIDTH - 1), 0)]
+        return [max(min(i - 1 + WIND_X[i][j], WORLD_HEIGHT - 1), 0), max(min(j + WIND_Y[i][j], WORLD_WIDTH - 1), 0)]
     elif action == ACTION_DOWN:
-        return [max(min(i + 1 + WIND_X[i][j]*gust, WORLD_HEIGHT - 1), 0), max(min(j + WIND_Y[i][j]*gust, WORLD_WIDTH - 1), 0)]
+        return [max(min(i + 1 + WIND_X[i][j], WORLD_HEIGHT - 1), 0), max(min(j + WIND_Y[i][j], WORLD_WIDTH - 1), 0)]
     elif action == ACTION_LEFT:
-        return [max(min(i + WIND_X[i][j]*gust, WORLD_HEIGHT - 1), 0), max(min(j - 1 + WIND_Y[i][j]*gust, WORLD_WIDTH - 1), 0)]
+        return [max(min(i + WIND_X[i][j], WORLD_HEIGHT - 1), 0), max(min(j - 1 + WIND_Y[i][j], WORLD_WIDTH - 1), 0)]
     elif action == ACTION_RIGHT:
-        return [max(min(i + WIND_X[i][j]*gust, WORLD_HEIGHT - 1), 0), max(min(j + 1 + WIND_Y[i][j]*gust, WORLD_WIDTH - 1), 0)]
+        return [max(min(i + WIND_X[i][j], WORLD_HEIGHT - 1), 0), max(min(j + 1 + WIND_Y[i][j], WORLD_WIDTH - 1), 0)]
     # Per discussion with Paulo, we are ignoring diagonal moves, at least for the moment, possibly always
+    # TODO - add IDLE as an action
     else:
         assert False  # This should never happen since all potential actions are accounted for
 
 
 # play for an episode
-def episode(q_value):
+def episode(q_value, eps):
 
     # track the total time steps in this episode
     time = 0
@@ -93,10 +117,7 @@ def episode(q_value):
     state = START
 
     # choose an action based on epsilon-greedy algorithm.
-    # Because we chose EPSILON = 0.1, there's a 10% chance that we select an action randomly.
-    # This is represented by computing the binomial distribution with n = 1 experiment and probability
-    # of occurrence epsilon = 0.1.
-    if np.random.binomial(1, EPSILON) == 1:
+    if np.random.binomial(1, eps) == 1:
         action = np.random.choice(ACTIONS)
     else:
         # Most of the time (90%), we select an action greedily.
@@ -111,8 +132,8 @@ def episode(q_value):
 
     # keep going until get to the goal state
     while state != GOAL:
-        next_state = step(state, action)
-        if np.random.binomial(1, EPSILON) == 1:  # ignore PyCharm compiler warning
+        next_state = step(state, action, eps)
+        if np.random.binomial(1, eps) == 1:
             next_action = np.random.choice(ACTIONS)
         else:
             values_ = q_value[next_state[0], next_state[1], :]
@@ -130,18 +151,20 @@ def episode(q_value):
     return time
 
 
-def figure_6_3():
-    q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, 4))
-    episode_limit = 5000
+def figure_6_3(eps):
 
+    episode_limit = 1000
+
+    q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, 4))
     steps = []
     ep = 0
     while ep < episode_limit:
-        steps.append(episode(q_value))
+        steps.append(episode(q_value, eps))
         ep += 1
     steps = np.add.accumulate(steps)
 
     plt.plot(steps, np.arange(1, len(steps) + 1))
+    plt.title(str(eps))
     plt.xlabel('Time steps')
     plt.ylabel('Episodes')
     plt.show()
@@ -169,4 +192,9 @@ def figure_6_3():
 
 
 if __name__ == '__main__':
-    figure_6_3()
+    figure_6_3(0.2)
+    figure_6_3(0.1)
+    figure_6_3(0.05)
+    figure_6_3(0.025)
+    figure_6_3(0.012)
+    figure_6_3(0)
