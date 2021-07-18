@@ -7,6 +7,7 @@
 # ALD 16-JUL-2021 Moved gust logic from individual episodes to initial matrix setup (per Paulo)     #
 #                 Changed epsilon from a hard-coded constant to a parameter for experimentation     #
 # ALD 17-JUL-2021 Added idle action; made cosmetic changes (UDRL->NSEW and wind->current)           #
+#                 Separated parameters for epsilon-greedy algorithm and chance of random action     #
 #####################################################################################################
 
 import numpy as np
@@ -85,12 +86,13 @@ ACTIONS = [IDLE, MOVE_NORTH, MOVE_SOUTH, MOVE_WEST, MOVE_EAST]
 
 
 # This function defines how the agent moves on the grid.
-def step(state, action, eps):
+def step(state, action, gremlin):
 
     i, j = state
 
-    # question - do we want random action tied to the same value as the one in the epsilon-greedy algorithm
-    if np.random.binomial(1, eps) == 1:
+    # gremlin represents the probability that action is random
+    # noise/uncertainty to account for unexpected disturbances, modeling error, and/or unknown dynamics
+    if np.random.binomial(1, gremlin) == 1:
         action = np.random.choice(ACTIONS)
     if action == IDLE:
         return [max(min(i + CURR_X[i][j], WORLD_HEIGHT - 1), 0), max(min(j + CURR_Y[i][j], WORLD_WIDTH - 1), 0)]
@@ -108,7 +110,7 @@ def step(state, action, eps):
 
 
 # play for an episode, return amount of time spent in the episode
-def episode(q_value, eps):
+def episode(q_value, eps, gremlin):
 
     # track the total time steps in this episode
     time = 0
@@ -126,13 +128,13 @@ def episode(q_value, eps):
         # Algorithmically:
         # for each action_ and value_ stored in values_
         #   if the variable value_ is maximum in the list values_
-        #       select the action_ associated with that q_value.
+        #     select the action_ associated with that q_value.
         values_ = q_value[state[0], state[1], :]
         action = np.random.choice([action_ for action_, value_ in enumerate(values_) if value_ == np.max(values_)])
 
     # keep going until get to the goal state
     while state != GOAL:
-        next_state = step(state, action, eps)
+        next_state = step(state, action, gremlin)
         if np.random.binomial(1, eps) == 1:
             next_action = np.random.choice(ACTIONS)
         else:
@@ -150,15 +152,15 @@ def episode(q_value, eps):
     return time
 
 
-def figure_6_3(eps):
+def figure_6_3(eps, gremlin):
 
     episode_limit = 1000
 
-    q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, 4))
+    q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, 5))
     steps = []
     ep = 0
     while ep < episode_limit:
-        steps.append(episode(q_value, eps))
+        steps.append(episode(q_value, eps, gremlin))
         ep += 1
     steps = np.add.accumulate(steps)
 
@@ -187,16 +189,19 @@ def figure_6_3(eps):
                 optimal_policy[-1].append('E')
             elif bestAction == IDLE:
                 optimal_policy[-1].append('I')
-    print('Optimal policy is:')
+    print('Optimal policy when epsilon equals', eps, 'and the random dynamics parameter equals', gremlin, 'is:')
     for row in optimal_policy:
         print(row)
 
 
 if __name__ == '__main__':
+    # original base scenario
+    figure_6_3(0.1, 0.1)
     # Experiment with various values of epsilon in the epsilon-greedy algorithm
-    figure_6_3(0.2)
-    figure_6_3(0.1)
-    figure_6_3(0.05)
-    figure_6_3(0.025)
-    figure_6_3(0.012)
-    figure_6_3(0)
+    figure_6_3(0.2, 0.1)
+    figure_6_3(0.05, 0.1)
+    figure_6_3(0, 0.1)
+    # Experiment with various values of the noise/uncertainty parameter
+    figure_6_3(0.1, 0.2)
+    figure_6_3(0.1, 0.05)
+    figure_6_3(0.1, 0)
