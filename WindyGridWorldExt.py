@@ -8,6 +8,7 @@
 #                 Changed epsilon from a hard-coded constant to a parameter for experimentation     #
 # ALD 17-JUL-2021 Added idle action; made cosmetic changes (UDRL->NSEW and wind->current)           #
 #                 Separated parameters for epsilon-greedy algorithm and chance of random action     #
+# ALD 20-JUL-2021 Added average time step graph, switched axes on graphs for readability            #
 #####################################################################################################
 
 import numpy as np
@@ -163,11 +164,21 @@ def figure_6_3(eps, gremlin):
         steps.append(episode(q_value, eps, gremlin))
         ep += 1
     steps = np.add.accumulate(steps)
+    divisor = np.add.accumulate(np.ones(episode_limit))
+    average_steps = steps/divisor
 
-    plt.plot(steps, np.arange(1, len(steps) + 1))
-    plt.title(str(eps))
-    plt.xlabel('Time steps')
-    plt.ylabel('Episodes')
+    plt.plot(np.arange(1, len(average_steps) + 1), average_steps)
+    title = 'epsilon = ' + str(eps) + ' and random dynamics parameter = ' + str(gremlin)
+    plt.title(title)
+    plt.xlabel('Episodes')
+    plt.ylabel('Average Time Steps')
+    plt.show()
+
+    plt.plot(np.arange(1, len(steps) + 1), steps)
+    title = 'epsilon = ' + str(eps) + ' and random dynamics parameter = ' + str(gremlin)
+    plt.title(title)
+    plt.xlabel('Episodes')
+    plt.ylabel('Aggregate Time Steps')
     plt.show()
 
     # display the optimal policy
