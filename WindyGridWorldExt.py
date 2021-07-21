@@ -1,14 +1,15 @@
 #####################################################################################################
 # Extension of Windy Grid World                                                                     #
 #                                                                                                   #
-# Revision history:                                                                                 #
-# ALD 11-JUL-2021 First version, assuming heterogeneous wind conditions across each row and column  #
+# Commit history:                                                                                   #
+# ALD 12-JUL-2021 First version, assuming heterogeneous wind conditions across each row and column  #
 # ALD 13-JUL-2021 Created wind matrix initialization and added stochastic gusts                     #
 # ALD 16-JUL-2021 Moved gust logic from individual episodes to initial matrix setup (per Paulo)     #
 #                 Changed epsilon from a hard-coded constant to a parameter for experimentation     #
 # ALD 17-JUL-2021 Added idle action; made cosmetic changes (UDRL->NSEW and wind->current)           #
-#                 Separated parameters for epsilon-greedy algorithm and chance of random action     #
+# ALD 17-JUL-2021 Separated parameters for epsilon-greedy algorithm and chance of random action     #
 # ALD 20-JUL-2021 Added average time step graph, switched axes on graphs for readability            #
+# ALD 21-JUL-2021 Corrected code so avg graph and agg graph are generated from same data series     #
 #####################################################################################################
 
 import numpy as np
@@ -164,22 +165,18 @@ def figure_6_3(eps, gremlin):
         steps.append(episode(q_value, eps, gremlin))
         ep += 1
     steps = np.add.accumulate(steps)
-    divisor = np.add.accumulate(np.ones(episode_limit))
-    average_steps = steps/divisor
 
-    plt.plot(np.arange(1, len(average_steps) + 1), average_steps)
-    title = 'epsilon = ' + str(eps) + ' and random dynamics parameter = ' + str(gremlin)
-    plt.title(title)
-    plt.xlabel('Episodes')
-    plt.ylabel('Average Time Steps')
-    plt.show()
-
-    plt.plot(np.arange(1, len(steps) + 1), steps)
-    title = 'epsilon = ' + str(eps) + ' and random dynamics parameter = ' + str(gremlin)
-    plt.title(title)
+    plt.figure(1)
     plt.xlabel('Episodes')
     plt.ylabel('Aggregate Time Steps')
-    plt.show()
+    plt.plot(np.arange(1, len(steps) + 1), steps)
+
+    plt.figure(2)
+    divisor = np.add.accumulate(np.ones(episode_limit))
+    average_steps = steps/divisor
+    plt.xlabel('Episodes')
+    plt.ylabel('Average Time Steps')
+    plt.plot(np.arange(1, len(average_steps) + 1), average_steps)
 
     # display the optimal policy
     optimal_policy = []
@@ -206,13 +203,25 @@ def figure_6_3(eps, gremlin):
 
 
 if __name__ == '__main__':
-    # original base scenario
-    figure_6_3(0.1, 0.1)
     # Experiment with various values of epsilon in the epsilon-greedy algorithm
-    figure_6_3(0.2, 0.1)
+    figure_6_3(0.2,  0.1)
+    figure_6_3(0.1,  0.1)
     figure_6_3(0.05, 0.1)
-    figure_6_3(0, 0.1)
+    figure_6_3(0,    0.1)
+    plt.figure(1)
+    plt.legend(["eps = 0.2", "eps = 0.1", "eps = 0.05", "eps = 0"])
+    plt.figure(2)
+    plt.legend(["eps = 0.2", "eps = 0.1", "eps = 0.05", "eps = 0"])
+    plt.show()
+    plt.figure(1).clear()
+    plt.figure(2).clear()
     # Experiment with various values of the noise/uncertainty parameter
     figure_6_3(0.1, 0.2)
+    figure_6_3(0.1, 0.1)
     figure_6_3(0.1, 0.05)
     figure_6_3(0.1, 0)
+    plt.figure(1)
+    plt.legend(["noise = 0.2", "noise = 0.1", "noise = 0.05", "noise = 0"])
+    plt.figure(2)
+    plt.legend(["noise = 0.2", "noise = 0.1", "noise = 0.05", "noise = 0"])
+    plt.show()
