@@ -10,6 +10,7 @@
 # ALD 17-JUL-2021 Separated parameters for epsilon-greedy algorithm and chance of random action     #
 # ALD 20-JUL-2021 Added average time step graph, switched axes on graphs for readability            #
 # ALD 21-JUL-2021 Corrected code so avg graph and agg graph are generated from same data series     #
+# ALD 22-JUL-2021 Added NE, NW, SE, SW actions
 #####################################################################################################
 
 import numpy as np
@@ -71,33 +72,29 @@ for ii in range(0, WORLD_HEIGHT):
 IDLE = 0
 MOVE_NORTH = 1
 MOVE_SOUTH = 2
-MOVE_WEST = 3
-MOVE_EAST = 4
+MOVE_EAST = 3
+MOVE_WEST = 4
+MOVE_NE = 5
+MOVE_NW = 6
+MOVE_SE = 7
+MOVE_SW = 8
 
 # Sarsa step size.  Sarsa algorithm is explained on p. 129 of the textbook.
 ALPHA = 0.5
 
-# reward for each step (what this means is we want to minimize the number of steps)
-# if we introduce diagonal steps, we'll need a separate reward = -sqrt(2) for them - ALD
-REWARD = -1.0
-
 # Start and goal positions of the agent
 START = [0, 0]
 GOAL = [5, 9]
-ACTIONS = [IDLE, MOVE_NORTH, MOVE_SOUTH, MOVE_WEST, MOVE_EAST]
+ACTIONS = [IDLE, MOVE_NORTH, MOVE_SOUTH, MOVE_EAST, MOVE_WEST, MOVE_NE, MOVE_NW, MOVE_SE, MOVE_SW]
 
 
 # This function defines how the agent moves on the grid.
 def step(state, action, gremlin):
-
     i, j = state
-
     # gremlin represents the probability that action is random
     # noise/uncertainty to account for unexpected disturbances, modeling error, and/or unknown dynamics
     if np.random.binomial(1, gremlin) == 1:
         action = np.random.choice(ACTIONS)
-    if action == IDLE:
-        return [max(min(i + CURR_X[i][j], WORLD_HEIGHT - 1), 0), max(min(j + CURR_Y[i][j], WORLD_WIDTH - 1), 0)]
     if action == MOVE_NORTH:
         return [max(min(i - 1 + CURR_X[i][j], WORLD_HEIGHT - 1), 0), max(min(j + CURR_Y[i][j], WORLD_WIDTH - 1), 0)]
     elif action == MOVE_SOUTH:
@@ -106,9 +103,16 @@ def step(state, action, gremlin):
         return [max(min(i + CURR_X[i][j], WORLD_HEIGHT - 1), 0), max(min(j - 1 + CURR_Y[i][j], WORLD_WIDTH - 1), 0)]
     elif action == MOVE_EAST:
         return [max(min(i + CURR_X[i][j], WORLD_HEIGHT - 1), 0), max(min(j + 1 + CURR_Y[i][j], WORLD_WIDTH - 1), 0)]
-    # Per discussion with Paulo, we are ignoring diagonal moves, at least for the moment, possibly always
-    else:
-        assert False  # This should never happen since all potential actions are accounted for
+    elif action == MOVE_NE:
+        return [max(min(i - 1 + CURR_X[i][j], WORLD_HEIGHT - 1), 0), max(min(j + 1 + CURR_Y[i][j], WORLD_WIDTH - 1), 0)]
+    elif action == MOVE_NW:
+        return [max(min(i - 1 + CURR_X[i][j], WORLD_HEIGHT - 1), 0), max(min(j - 1 + CURR_Y[i][j], WORLD_WIDTH - 1), 0)]
+    elif action == MOVE_SE:
+        return [max(min(i + 1 + CURR_X[i][j], WORLD_HEIGHT - 1), 0), max(min(j + 1 + CURR_Y[i][j], WORLD_WIDTH - 1), 0)]
+    elif action == MOVE_SW:
+        return [max(min(i + 1 + CURR_X[i][j], WORLD_HEIGHT - 1), 0), max(min(j - 1 + CURR_Y[i][j], WORLD_WIDTH - 1), 0)]
+    else:  # action == IDLE
+        return [max(min(i + CURR_X[i][j], WORLD_HEIGHT - 1), 0), max(min(j + CURR_Y[i][j], WORLD_WIDTH - 1), 0)]
 
 
 # play for an episode, return amount of time spent in the episode
@@ -143,10 +147,15 @@ def episode(q_value, eps, gremlin):
             values_ = q_value[next_state[0], next_state[1], :]
             next_action = np.random.choice(
                 [action_ for action_, value_ in enumerate(values_) if value_ == np.max(values_)])
-        # Sarsa update
-        # For more info about Sarsa Algorithm, please refer to p. 129 of the textbook.
+        # Sarsa update - For more info about Sarsa Algorithm, please refer to p. 129 of the textbook.
+        if action == MOVE_NORTH or action == MOVE_SOUTH or action == MOVE_EAST or action == MOVE_WEST:
+            reward = -1
+        elif action == MOVE_NE or action == MOVE_NW or action == MOVE_SE or action == MOVE_SW:
+            reward = -1
+        else:  # action == IDLE:
+            reward = -1
         q_value[state[0], state[1], action] = q_value[state[0], state[1], action] + ALPHA * (
-                    REWARD + q_value[next_state[0], next_state[1], next_action] -
+                    reward + q_value[next_state[0], next_state[1], next_action] -
                     q_value[state[0], state[1], action])
         state = next_state
         action = next_action
@@ -156,9 +165,9 @@ def episode(q_value, eps, gremlin):
 
 def figure_6_3(eps, gremlin):
 
-    episode_limit = 1000
+    episode_limit = 2000
 
-    q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, 5))
+    q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, 9))
     steps = []
     ep = 0
     while ep < episode_limit:
@@ -188,15 +197,23 @@ def figure_6_3(eps, gremlin):
                 continue
             bestAction = np.argmax(q_value[i, j, :])
             if bestAction == MOVE_NORTH:
-                optimal_policy[-1].append('N')
+                optimal_policy[-1].append('N ')
             elif bestAction == MOVE_SOUTH:
-                optimal_policy[-1].append('S')
+                optimal_policy[-1].append('S ')
             elif bestAction == MOVE_WEST:
-                optimal_policy[-1].append('W')
+                optimal_policy[-1].append('W ')
             elif bestAction == MOVE_EAST:
-                optimal_policy[-1].append('E')
+                optimal_policy[-1].append('E ')
+            elif bestAction == MOVE_NE:
+                optimal_policy[-1].append('NE')
+            elif bestAction == MOVE_NW:
+                optimal_policy[-1].append('NW')
+            elif bestAction == MOVE_SE:
+                optimal_policy[-1].append('SE')
+            elif bestAction == MOVE_SW:
+                optimal_policy[-1].append('SW')
             elif bestAction == IDLE:
-                optimal_policy[-1].append('I')
+                optimal_policy[-1].append('I ')
     print('Optimal policy when epsilon equals', eps, 'and the random dynamics parameter equals', gremlin, 'is:')
     for row in optimal_policy:
         print(row)
