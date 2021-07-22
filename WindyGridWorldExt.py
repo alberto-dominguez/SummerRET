@@ -10,7 +10,7 @@
 # ALD 17-JUL-2021 Separated parameters for epsilon-greedy algorithm and chance of random action     #
 # ALD 20-JUL-2021 Added average time step graph, switched axes on graphs for readability            #
 # ALD 21-JUL-2021 Corrected code so avg graph and agg graph are generated from same data series     #
-# ALD 22-JUL-2021 Added NE, NW, SE, SW actions
+# ALD 22-JUL-2021 Added NE, NW, SE, SW actions                                                      #
 #####################################################################################################
 
 import numpy as np
@@ -193,7 +193,7 @@ def figure_6_3(eps, gremlin):
         optimal_policy.append([])
         for j in range(0, WORLD_WIDTH):
             if [i, j] == GOAL:
-                optimal_policy[-1].append('G')
+                optimal_policy[-1].append('G ')
                 continue
             bestAction = np.argmax(q_value[i, j, :])
             if bestAction == MOVE_NORTH:
@@ -225,10 +225,11 @@ if __name__ == '__main__':
     figure_6_3(0.1,  0.1)
     figure_6_3(0.05, 0.1)
     figure_6_3(0,    0.1)
+    leg = ["eps = 0.2", "eps = 0.1", "eps = 0.05", "eps = 0"]
     plt.figure(1)
-    plt.legend(["eps = 0.2", "eps = 0.1", "eps = 0.05", "eps = 0"])
+    plt.legend(leg)
     plt.figure(2)
-    plt.legend(["eps = 0.2", "eps = 0.1", "eps = 0.05", "eps = 0"])
+    plt.legend(leg)
     plt.show()
     plt.figure(1).clear()
     plt.figure(2).clear()
@@ -237,8 +238,9 @@ if __name__ == '__main__':
     figure_6_3(0.1, 0.1)
     figure_6_3(0.1, 0.05)
     figure_6_3(0.1, 0)
+    leg = ["noise = 0.2", "noise = 0.1", "noise = 0.05", "noise = 0"]
     plt.figure(1)
-    plt.legend(["noise = 0.2", "noise = 0.1", "noise = 0.05", "noise = 0"])
+    plt.legend(leg)
     plt.figure(2)
-    plt.legend(["noise = 0.2", "noise = 0.1", "noise = 0.05", "noise = 0"])
+    plt.legend(leg)
     plt.show()
