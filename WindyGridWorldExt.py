@@ -17,8 +17,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # world height and width (depth will be ignored)
-WORLD_HEIGHT = 10
-WORLD_WIDTH = 10
+WORLD_HEIGHT = 15
+WORLD_WIDTH = 15
 
 # initialize current strength matrices to 0
 CURR_X = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=int)
@@ -84,7 +84,7 @@ ALPHA = 0.5
 
 # Start and goal positions of the agent
 START = [0, 0]
-GOAL = [5, 9]
+GOAL = [14, 14]
 ACTIONS = [IDLE, MOVE_NORTH, MOVE_SOUTH, MOVE_EAST, MOVE_WEST, MOVE_NE, MOVE_NW, MOVE_SE, MOVE_SW]
 
 
