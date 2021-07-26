@@ -20,14 +20,18 @@ import matplotlib.pyplot as plt
 
 # constants
 PI = math.pi
-E = 0.25
+E = 0.1
 W = PI / 5
 A = 0.1
-ALPHA = 0.5  # Sarsa step size.  Sarsa algorithm is explained on p. 129 of the textbook.
+
+# The SARSA learning rate alpha determines to what extent newly acquired information overrides old information.
+# A factor of 0 makes the agent not learn anything; a factor of 1 makes the agent consider only the most recent information.
+ALPHA = 0.667
 
 # world height and width (depth will be ignored)
 WORLD_HEIGHT = 10
 WORLD_WIDTH = 20
+SCALE_FACTOR = 10
 
 # possible actions
 IDLE = 0
@@ -69,13 +73,12 @@ def v(xx, yy, t):
 # create double gyre velocity field
 # This code is intended to reproduce double gyre stream flow described on the LCS website
 # https://shaddenlab.berkeley.edu/uploads/LCS-tutorial/examples.html#Sec7.1
-# The grid size in this code is 10x20, but the example I am trying to reproduce is 1x2 (hence the /10 in the code)
 CURR_X = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=float)
 CURR_Y = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=float)
 for ii in range(0, WORLD_HEIGHT):
-    x = ii / 10
+    x = ii / SCALE_FACTOR
     for jj in range(0, WORLD_WIDTH):
-        y = jj / 10
+        y = jj / SCALE_FACTOR
         CURR_X[ii][jj] = v(x, y, 0)
         CURR_Y[ii][jj] = u(x, y, 0)
 xv, yv = np.meshgrid(np.linspace(0, 2, WORLD_WIDTH), np.linspace(0, 1, WORLD_HEIGHT))
@@ -84,12 +87,12 @@ plt.show()
 
 
 # This function defines how the agent moves on the grid.
+# gremlin represents the probability that action is random
+# noise/uncertainty to account for unexpected disturbances, modeling error, and/or unknown dynamics
 def step(state, action, gremlin):
     i, j = state
-    # gremlin represents the probability that action is random
-    # noise/uncertainty to account for unexpected disturbances, modeling error, and/or unknown dynamics
-    dx = int(CURR_X[i][j])
-    dy = int(CURR_Y[i][j])
+    dx = int(CURR_X[i][j] * SCALE_FACTOR)
+    dy = int(CURR_Y[i][j] * SCALE_FACTOR)
     if np.random.binomial(1, gremlin) == 1:
         action = np.random.choice(ACTIONS)
     if action == MOVE_NORTH:
@@ -97,9 +100,9 @@ def step(state, action, gremlin):
     elif action == MOVE_SOUTH:
         return [max(min(i + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j + dy, WORLD_WIDTH - 1), 0)]
     elif action == MOVE_WEST:
-        return [max(min(i + dx, WORLD_HEIGHT - 1), 0), max(min(j - 1 + dy, WORLD_WIDTH - 1), 0)]
+        return [max(min(i + dx, WORLD_HEIGHT - 1), 0),     max(min(j - 1 + dy, WORLD_WIDTH - 1), 0)]
     elif action == MOVE_EAST:
-        return [max(min(i + dx, WORLD_HEIGHT - 1), 0), max(min(j + 1 + dy, WORLD_WIDTH - 1), 0)]
+        return [max(min(i + dx, WORLD_HEIGHT - 1), 0),     max(min(j + 1 + dy, WORLD_WIDTH - 1), 0)]
     elif action == MOVE_NE:
         return [max(min(i - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j + 1 + dy, WORLD_WIDTH - 1), 0)]
     elif action == MOVE_NW:
@@ -109,7 +112,7 @@ def step(state, action, gremlin):
     elif action == MOVE_SW:
         return [max(min(i + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j - 1 + dy, WORLD_WIDTH - 1), 0)]
     else:  # action == IDLE
-        return [max(min(i + dx, WORLD_HEIGHT - 1), 0), max(min(j + dy, WORLD_WIDTH - 1), 0)]
+        return [max(min(i + dx, WORLD_HEIGHT - 1), 0),     max(min(j + dy, WORLD_WIDTH - 1), 0)]
 
 
 # play for an episode, return amount of time spent in the episode
@@ -229,6 +232,8 @@ if __name__ == '__main__':
     plt.figure(2)
     plt.legend(leg)
     plt.show()
+
+    # reset plot
     plt.figure(1).clear()
     plt.figure(2).clear()
     
