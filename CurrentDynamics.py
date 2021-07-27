@@ -9,7 +9,7 @@ W = PI / 5
 A = 0.1
 WORLD_HEIGHT = 10
 WORLD_WIDTH = 20
-SCALE_FACTOR = 10
+SPACE_SCALE_FACTOR = 10
 
 
 def a(t):
@@ -39,9 +39,9 @@ def double_gyre(t):
     CURR_X = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=float)
     CURR_Y = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=float)
     for ii in range(0, WORLD_HEIGHT):
-        x = ii / SCALE_FACTOR
+        x = ii / SPACE_SCALE_FACTOR
         for jj in range(0, WORLD_WIDTH):
-            y = jj / SCALE_FACTOR
+            y = jj / SPACE_SCALE_FACTOR
             CURR_X[ii][jj] = v(x, y, t)
             CURR_Y[ii][jj] = u(x, y, t)
 #    xv, yv = np.meshgrid(np.linspace(0, 2, WORLD_WIDTH), np.linspace(0, 1, WORLD_HEIGHT))

@@ -1,7 +1,7 @@
 #####################################################################################################
 # Double Gyre Reinforcement Learning                                                                #
 #                                                                                                   #
-# Commit history:                                                                                   #
+# Version history:                                                                                  #
 # ALD 12-JUL-2021 First version, assuming heterogeneous wind conditions across each row and column  #
 # ALD 13-JUL-2021 Created wind matrix initialization and added stochastic gusts                     #
 # ALD 16-JUL-2021 Moved gust logic from individual episodes to initial matrix setup (per Paulo)     #
@@ -12,6 +12,8 @@
 # ALD 21-JUL-2021 Corrected code so avg graph and agg graph are generated from same data series     #
 # ALD 22-JUL-2021 Added NE, NW, SE, SW actions                                                      #
 # ALD 23-JUL-2021 Implemented double gyre velocity field                                            #
+# ALD 27-JUL-2021 Separate current dynamics into a separate python file                             #
+#                 Introduced time dependence into the current grid                                  #
 #####################################################################################################
 
 import numpy as np
@@ -22,10 +24,11 @@ import CurrentDynamics as cd
 # A factor of 0 makes the agent not learn anything; a factor of 1 makes the agent consider only the most recent info.
 ALPHA = 0.4
 
-# world height and width (depth will be ignored)
+# dimensions
 WORLD_HEIGHT = 10
 WORLD_WIDTH = 20
-SCALE_FACTOR = 10
+SPACE_SCALE_FACTOR = 10
+TIME_SCALE_FACTOR = 20
 
 # possible actions
 IDLE = 0
@@ -47,21 +50,21 @@ GOAL = [9, 9]
 # This function defines how the agent moves on the grid.
 # gremlin represents the probability that action is random
 # noise/uncertainty to account for unexpected disturbances, modeling error, and/or unknown dynamics
-def step(state, action, gremlin):
+def step(state, action, gremlin, time):
     i, j = state
-    CURR_X, CURR_Y = cd.double_gyre(0)  # TODO - add time-dependence here
-    dx = int(CURR_X[i][j] * SCALE_FACTOR)
-    dy = int(CURR_Y[i][j] * SCALE_FACTOR)
+    CURR_X, CURR_Y = cd.double_gyre(time)
+    dx = int(CURR_X[i][j] * SPACE_SCALE_FACTOR)
+    dy = int(CURR_Y[i][j] * SPACE_SCALE_FACTOR)
     if np.random.binomial(1, gremlin) == 1:
         action = np.random.choice(ACTIONS)
     if action == MOVE_NORTH:
-        return [max(min(i - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j + dy, WORLD_WIDTH - 1), 0)]
+        return [max(min(i - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j     + dy, WORLD_WIDTH - 1), 0)]
     elif action == MOVE_SOUTH:
-        return [max(min(i + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j + dy, WORLD_WIDTH - 1), 0)]
+        return [max(min(i + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j     + dy, WORLD_WIDTH - 1), 0)]
     elif action == MOVE_WEST:
-        return [max(min(i + dx, WORLD_HEIGHT - 1), 0),     max(min(j - 1 + dy, WORLD_WIDTH - 1), 0)]
+        return [max(min(i     + dx, WORLD_HEIGHT - 1), 0), max(min(j - 1 + dy, WORLD_WIDTH - 1), 0)]
     elif action == MOVE_EAST:
-        return [max(min(i + dx, WORLD_HEIGHT - 1), 0),     max(min(j + 1 + dy, WORLD_WIDTH - 1), 0)]
+        return [max(min(i     + dx, WORLD_HEIGHT - 1), 0), max(min(j + 1 + dy, WORLD_WIDTH - 1), 0)]
     elif action == MOVE_NE:
         return [max(min(i - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j + 1 + dy, WORLD_WIDTH - 1), 0)]
     elif action == MOVE_NW:
@@ -71,13 +74,13 @@ def step(state, action, gremlin):
     elif action == MOVE_SW:
         return [max(min(i + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j - 1 + dy, WORLD_WIDTH - 1), 0)]
     else:  # action == IDLE
-        return [max(min(i + dx, WORLD_HEIGHT - 1), 0),     max(min(j + dy, WORLD_WIDTH - 1), 0)]
+        return [max(min(i     + dx, WORLD_HEIGHT - 1), 0), max(min(j     + dy, WORLD_WIDTH - 1), 0)]
 
 
 # play for an episode, return amount of time spent in the episode
 def episode(q_value, eps, gremlin):
 
-    # track the total time steps in this episode
+    # initialize the counter that will track the total time steps in this episode
     time = 0
 
     # initialize state
@@ -99,7 +102,8 @@ def episode(q_value, eps, gremlin):
 
     # keep going until get to the goal state
     while state != GOAL:
-        next_state = step(state, action, gremlin)
+        t = time / TIME_SCALE_FACTOR
+        next_state = step(state, action, gremlin, t)
         if np.random.binomial(1, eps) == 1:
             next_action = np.random.choice(ACTIONS)
         else:
@@ -107,12 +111,8 @@ def episode(q_value, eps, gremlin):
             next_action = np.random.choice(
                 [action_ for action_, value_ in enumerate(values_) if value_ == np.max(values_)])
         # Sarsa update - For more info about Sarsa Algorithm, please refer to p. 129 of the textbook.
-        if action == MOVE_NORTH or action == MOVE_SOUTH or action == MOVE_EAST or action == MOVE_WEST:
-            reward = -1
-        elif action == MOVE_NE or action == MOVE_NW or action == MOVE_SE or action == MOVE_SW:
-            reward = -1
-        else:  # action == IDLE:
-            reward = -1
+        # TODO - differentiate reward for Idle (0) vs N, S, E, W (1) vs NE, NW, SE, SW (sqrt 2)
+        reward = -1
         q_value[state[0], state[1], action] = q_value[state[0], state[1], action] + ALPHA * (
                     reward + q_value[next_state[0], next_state[1], next_action] -
                     q_value[state[0], state[1], action])
@@ -171,7 +171,7 @@ def figure_6_3(eps, gremlin):
                 optimal_policy[-1].append('SE')
             elif bestAction == MOVE_SW:
                 optimal_policy[-1].append('SW')
-            elif bestAction == IDLE:
+            else:  # bestAction == IDLE
                 optimal_policy[-1].append('I ')
     print('Optimal policy when epsilon equals', eps, 'and the random dynamics parameter equals', gremlin, 'is:')
     for row in optimal_policy:
