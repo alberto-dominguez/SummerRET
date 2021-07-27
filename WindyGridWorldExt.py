@@ -7,26 +7,20 @@
 # ALD 16-JUL-2021 Moved gust logic from individual episodes to initial matrix setup (per Paulo)     #
 #                 Changed epsilon from a hard-coded constant to a parameter for experimentation     #
 # ALD 17-JUL-2021 Added idle action; made cosmetic changes (UDRL->NSEW and wind->current)           #
-# ALD 17-JUL-2021 Separated parameters for epsilon-greedy algorithm and chance of random action     #
+#                 Separated parameters for epsilon-greedy algorithm and chance of random action     #
 # ALD 20-JUL-2021 Added average time step graph, switched axes on graphs for readability            #
 # ALD 21-JUL-2021 Corrected code so avg graph and agg graph are generated from same data series     #
 # ALD 22-JUL-2021 Added NE, NW, SE, SW actions                                                      #
 # ALD 23-JUL-2021 Implemented double gyre velocity field                                            #
 #####################################################################################################
 
-import math
 import numpy as np
 import matplotlib.pyplot as plt
-
-# constants
-PI = math.pi
-E = 0.1
-W = PI / 5
-A = 0.1
+import CurrentDynamics as cd
 
 # The SARSA learning rate alpha determines to what extent newly acquired information overrides old information.
-# A factor of 0 makes the agent not learn anything; a factor of 1 makes the agent consider only the most recent information.
-ALPHA = 0.667
+# A factor of 0 makes the agent not learn anything; a factor of 1 makes the agent consider only the most recent info.
+ALPHA = 0.4
 
 # world height and width (depth will be ignored)
 WORLD_HEIGHT = 10
@@ -50,47 +44,12 @@ START = [0, 0]
 GOAL = [9, 9]
 
 
-def a(t):
-    return E * math.sin(W * t)
-
-
-def b(t):
-    return 1 - 2 * E * math.sin(W * t)
-
-
-def f(xx, t):
-    return a(t) * xx**2 + b(t) * xx
-
-
-def u(xx, yy, t):
-    return -PI * A * math.sin(PI*f(xx, t)) * math.cos(PI * yy)
-
-
-def v(xx, yy, t):
-    return PI * A * math.cos(PI*f(xx, t)) * math.sin(PI * yy) * (2 * a(t) * xx + b(t))
-
-
-# create double gyre velocity field
-# This code is intended to reproduce double gyre stream flow described on the LCS website
-# https://shaddenlab.berkeley.edu/uploads/LCS-tutorial/examples.html#Sec7.1
-CURR_X = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=float)
-CURR_Y = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=float)
-for ii in range(0, WORLD_HEIGHT):
-    x = ii / SCALE_FACTOR
-    for jj in range(0, WORLD_WIDTH):
-        y = jj / SCALE_FACTOR
-        CURR_X[ii][jj] = v(x, y, 0)
-        CURR_Y[ii][jj] = u(x, y, 0)
-xv, yv = np.meshgrid(np.linspace(0, 2, WORLD_WIDTH), np.linspace(0, 1, WORLD_HEIGHT))
-plt.quiver(xv, yv, CURR_X, CURR_Y)
-plt.show()
-
-
 # This function defines how the agent moves on the grid.
 # gremlin represents the probability that action is random
 # noise/uncertainty to account for unexpected disturbances, modeling error, and/or unknown dynamics
 def step(state, action, gremlin):
     i, j = state
+    CURR_X, CURR_Y = cd.double_gyre(0)  # TODO - add time-dependence here
     dx = int(CURR_X[i][j] * SCALE_FACTOR)
     dy = int(CURR_Y[i][j] * SCALE_FACTOR)
     if np.random.binomial(1, gremlin) == 1:
@@ -165,7 +124,7 @@ def episode(q_value, eps, gremlin):
 
 def figure_6_3(eps, gremlin):
 
-    episode_limit = 2000
+    episode_limit = 200
 
     q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, 9))
     steps = []
