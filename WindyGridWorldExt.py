@@ -102,8 +102,10 @@ def episode(q_value, eps, gremlin):
 
     # keep going until get to the goal state
     while state != GOAL:
+        # determine the next state
         t = time / TIME_SCALE_FACTOR
         next_state = step(state, action, gremlin, t)
+        # choose the next action based on epsilon-greedy algorithm
         if np.random.binomial(1, eps) == 1:
             next_action = np.random.choice(ACTIONS)
         else:
@@ -123,7 +125,7 @@ def episode(q_value, eps, gremlin):
 
 def figure_6_3(eps, gremlin):
 
-    episode_limit = 200
+    episode_limit = 2000
 
     q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, 9))
     steps = []
@@ -141,6 +143,7 @@ def figure_6_3(eps, gremlin):
     plt.figure(2)
     divisor = np.add.accumulate(np.ones(episode_limit))
     average_steps = steps/divisor
+    print(average_steps[episode_limit - 1])
     plt.xlabel('Episodes')
     plt.ylabel('Average Time Steps')
     plt.plot(np.arange(1, len(average_steps) + 1), average_steps)
@@ -172,19 +175,19 @@ def figure_6_3(eps, gremlin):
                 optimal_policy[-1].append('SW')
             else:  # bestAction == IDLE
                 optimal_policy[-1].append('I ')
-    print('Optimal policy when epsilon equals', eps, 'and the random dynamics parameter equals', gremlin, 'is:')
-    for row in optimal_policy:
-        print(row)
+#    print('Optimal policy when epsilon equals', eps, 'and the random dynamics parameter equals', gremlin, 'is:')
+#    for row in optimal_policy:
+#        print(row)
 
 
 if __name__ == '__main__':
 
     # Experiment with various values of epsilon in the epsilon-greedy algorithm
-    figure_6_3(0.2,  0.1)
-    figure_6_3(0.1,  0.1)
-    figure_6_3(0.05, 0.1)
-    figure_6_3(0,    0.1)
-    leg = ["eps = 0.2", "eps = 0.1", "eps = 0.05", "eps = 0"]
+    figure_6_3(0.2, 0.1)
+    figure_6_3(0.3, 0.1)
+    figure_6_3(0.4, 0.1)
+    figure_6_3(0.5, 0.1)
+    leg = ["eps = 0.2", "eps = 0.3", "eps = 0.4", "eps = 0.5"]
     plt.figure(1)
     plt.legend(leg)
     plt.figure(2)
@@ -194,13 +197,14 @@ if __name__ == '__main__':
     # reset plot
     plt.figure(1).clear()
     plt.figure(2).clear()
-    
+
     # Experiment with various values of the noise/uncertainty parameter
-    figure_6_3(0.1, 0.2)
-    figure_6_3(0.1, 0.1)
+    figure_6_3(0.1, 0.07)
+    figure_6_3(0.1, 0.06)
     figure_6_3(0.1, 0.05)
-    figure_6_3(0.1, 0)
-    leg = ["noise = 0.2", "noise = 0.1", "noise = 0.05", "noise = 0"]
+    figure_6_3(0.1, 0.04)
+    figure_6_3(0.1, 0.03)
+    leg = ["noise = 0.07", "noise = 0.06", "noise = 0.05", "noise = 0.04", "noise = 0.03"]
     plt.figure(1)
     plt.legend(leg)
     plt.figure(2)
