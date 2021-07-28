@@ -1,6 +1,6 @@
 import math
 import numpy as np
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 # constants
 PI = math.pi
@@ -32,10 +32,10 @@ def v(xx, yy, t):
     return PI * A * math.cos(PI*f(xx, t)) * math.sin(PI * yy) * (2 * a(t) * xx + b(t))
 
 
+# create double gyre velocity field
+# This function is intended to reproduce double gyre stream flow described on the LCS website
+# https://shaddenlab.berkeley.edu/uploads/LCS-tutorial/examples.html#Sec7.1
 def double_gyre(t):
-    # create double gyre velocity field
-    # This code is intended to reproduce double gyre stream flow described on the LCS website
-    # https://shaddenlab.berkeley.edu/uploads/LCS-tutorial/examples.html#Sec7.1
     CURR_X = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=float)
     CURR_Y = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=float)
     for ii in range(0, WORLD_HEIGHT):

@@ -86,7 +86,7 @@ def episode(q_value, eps, gremlin):
     # initialize state
     state = START
 
-    # choose an action based on epsilon-greedy algorithm.
+    # choose an initial action based on epsilon-greedy algorithm
     if np.random.binomial(1, eps) == 1:
         # eps% of the time, we select an action randomly
         action = np.random.choice(ACTIONS)
@@ -110,8 +110,7 @@ def episode(q_value, eps, gremlin):
             values_ = q_value[next_state[0], next_state[1], :]
             next_action = np.random.choice(
                 [action_ for action_, value_ in enumerate(values_) if value_ == np.max(values_)])
-        # Sarsa update - For more info about Sarsa Algorithm, please refer to p. 129 of the textbook.
-        # TODO - differentiate reward for Idle (0) vs N, S, E, W (1) vs NE, NW, SE, SW (sqrt 2)
+        # Sarsa update - For more info about Sarsa algorithm, please refer to p. 129 of the textbook.
         reward = -1
         q_value[state[0], state[1], action] = q_value[state[0], state[1], action] + ALPHA * (
                     reward + q_value[next_state[0], next_state[1], next_action] -
