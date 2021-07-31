@@ -3,9 +3,9 @@ import numpy as np
 
 # constants
 PI = math.pi
-E = 1
+E = 0.25
 W = PI / 5
-A = 1
+A = 0.1
 WORLD_HEIGHT = 10
 WORLD_WIDTH = 20
 SPACE_SCALE_FACTOR = 10
@@ -24,11 +24,11 @@ def f(xx, t):
 
 
 def u(xx, yy, t):
-    return -PI * A * math.sin(PI*f(xx, t)) * math.cos(PI * yy)
+    return PI * A * math.sin(PI*f(xx, t)) * math.cos(PI * yy)
 
 
 def v(xx, yy, t):
-    return PI * A * math.cos(PI*f(xx, t)) * math.sin(PI * yy) * (2 * a(t) * xx + b(t))
+    return -PI * A * math.cos(PI*f(xx, t)) * math.sin(PI * yy) * (2 * a(t) * xx + b(t))
 
 
 # create a double-gyre velocity field

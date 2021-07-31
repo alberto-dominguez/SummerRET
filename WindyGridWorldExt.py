@@ -14,6 +14,7 @@
 # ALD 23-JUL-2021 Implemented double gyre velocity field                                            #
 # ALD 27-JUL-2021 Separate current dynamics into a separate python file                             #
 #                 Introduced time dependence into the current grid                                  #
+# ALD 30-JUL-2021 Modified double gyre function to match example Mov. 11 on the LCS website         #
 #####################################################################################################
 
 import numpy as np
@@ -120,6 +121,8 @@ def episode(q_value, eps, gremlin):
         state = next_state
         action = next_action
         time += 1
+
+    # return the total time steps in this episode
     return time
 
 
@@ -133,17 +136,19 @@ def figure_6_3(eps, gremlin):
     while ep < episode_limit:
         steps.append(episode(q_value, eps, gremlin))
         ep += 1
-    steps = np.add.accumulate(steps)
+        if ep % 1000 == 0:
+            print(".", end="")
 
+    steps = np.add.accumulate(steps)
     plt.figure(1)
     plt.xlabel('Episodes')
     plt.ylabel('Aggregate Time Steps')
     plt.plot(np.arange(1, len(steps) + 1), steps)
 
-    plt.figure(2)
     divisor = np.add.accumulate(np.ones(episode_limit))
     average_steps = steps/divisor
     print(average_steps[episode_limit - 1])
+    plt.figure(2)
     plt.xlabel('Episodes')
     plt.ylabel('Average Time Steps')
     plt.plot(np.arange(1, len(average_steps) + 1), average_steps)
@@ -183,28 +188,27 @@ def figure_6_3(eps, gremlin):
 if __name__ == '__main__':
 
     # Experiment with various values of epsilon in the epsilon-greedy algorithm
-    figure_6_3(0.2, 0.1)
-    figure_6_3(0.3, 0.1)
-    figure_6_3(0.4, 0.1)
-    figure_6_3(0.5, 0.1)
-    leg = ["eps = 0.2", "eps = 0.3", "eps = 0.4", "eps = 0.5"]
-    plt.figure(1)
-    plt.legend(leg)
-    plt.figure(2)
-    plt.legend(leg)
-    plt.show()
+#    figure_6_3(0.2,  0.1)
+#    figure_6_3(0.1,  0.1)
+#    figure_6_3(0.05, 0.1)
+#    figure_6_3(0,    0.1)
+#    leg = ["eps = 0.2", "eps = 0.1", "eps = 0.05", "eps = 0"]
+#    plt.figure(1)
+#    plt.legend(leg)
+#    plt.figure(2)
+#    plt.legend(leg)
+#    plt.show()
 
     # reset plot
-    plt.figure(1).clear()
-    plt.figure(2).clear()
+#    plt.figure(1).clear()
+#    plt.figure(2).clear()
 
     # Experiment with various values of the noise/uncertainty parameter
-    figure_6_3(0.1, 0.07)
-    figure_6_3(0.1, 0.06)
+    figure_6_3(0.1, 0.2)
+    figure_6_3(0.1, 0.1)
     figure_6_3(0.1, 0.05)
-    figure_6_3(0.1, 0.04)
-    figure_6_3(0.1, 0.03)
-    leg = ["noise = 0.07", "noise = 0.06", "noise = 0.05", "noise = 0.04", "noise = 0.03"]
+    figure_6_3(0.1, 0)
+    leg = ["noise = 0.2", "noise = 0.1", "noise = 0.05", "noise = 0"]
     plt.figure(1)
     plt.legend(leg)
     plt.figure(2)
