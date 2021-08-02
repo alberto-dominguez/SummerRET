@@ -9,10 +9,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import CurrentDynamics as cd
 
-# The SARSA learning rate alpha determines to what extent newly acquired information overrides old information.
-# A factor of 0 makes the agent not learn anything; a factor of 1 makes the agent consider only the most recent info.
-ALPHA = 0.5
-
 # dimensions
 WORLD_HEIGHT = 10
 WORLD_WIDTH = 20
@@ -41,7 +37,7 @@ NW = 7
 # Start and goal positions of the agent
 START_BEARING = NORTH
 START = [0, 0, START_BEARING]
-GOAL = [9, 9, START_BEARING]  # TODO - we don't really know what the goal bearing should be
+GOAL = [9, 9, 0]
 
 
 # This function defines how the agent moves on the grid.
@@ -82,7 +78,7 @@ def step(state, action, gremlin, time):
 
 
 # play for an episode, return amount of time spent in the episode
-def episode(q_value, eps, gremlin):
+def episode(q_value, eps, gremlin, alpha):
 
     # initialize the counter that will track the total time steps in this episode
     time = 0
@@ -105,7 +101,7 @@ def episode(q_value, eps, gremlin):
         action = np.random.choice([action_ for action_, value_ in enumerate(values_) if value_ == np.max(values_)])
 
     # keep going until get to the goal state
-    while state != GOAL:
+    while state[0] != GOAL[0] or state[1] != GOAL[1]:  # bearing doesn't matter if we arrived at the goal cell
         # determine the next state
         t = time / TIME_SCALE_FACTOR
         next_state = step(state, action, gremlin, t)
@@ -118,7 +114,7 @@ def episode(q_value, eps, gremlin):
                 [action_ for action_, value_ in enumerate(values_) if value_ == np.max(values_)])
         # Sarsa update - For more info about Sarsa algorithm, please refer to p. 129 of the textbook.
         reward = -1
-        q_value[state[0], state[1], action] = q_value[state[0], state[1], action] + ALPHA * (
+        q_value[state[0], state[1], action] = q_value[state[0], state[1], action] + alpha * (
                     reward + q_value[next_state[0], next_state[1], next_action] -
                     q_value[state[0], state[1], action])
         state = next_state
@@ -129,18 +125,18 @@ def episode(q_value, eps, gremlin):
     return time
 
 
-def figure_6_3(eps, gremlin):
+def figure_6_3(eps, gremlin, alpha):
 
-    episode_limit = 20
+    episode_limit = 300
 
     q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, ACTION_SPACE_SIZE))
     steps = []
     ep = 0
     while ep < episode_limit:
-        steps.append(episode(q_value, eps, gremlin))
+        steps.append(episode(q_value, eps, gremlin, alpha))
         ep += 1
-#        if ep % 1000 == 0:
-        print(".", end="")
+        if ep % 10 == 0:
+            print(".", end="")
 
     steps = np.add.accumulate(steps)
     plt.figure(1)
@@ -161,7 +157,7 @@ def figure_6_3(eps, gremlin):
     for i in range(0, WORLD_HEIGHT):
         optimal_policy.append([])
         for j in range(0, WORLD_WIDTH):
-            if [i, j] == GOAL:
+            if i == GOAL[0] and j == GOAL[1]:
                 optimal_policy[-1].append('G ')
                 continue
             bestAction = np.argmax(q_value[i, j, :])
@@ -181,10 +177,10 @@ def figure_6_3(eps, gremlin):
 if __name__ == '__main__':
 
     # Experiment with various values of epsilon in the epsilon-greedy algorithm
-#    figure_6_3(0.2,  0.1)
-#    figure_6_3(0.1,  0.1)
-#    figure_6_3(0.05, 0.1)
-#    figure_6_3(0,    0.1)
+#    figure_6_3(0.2,  0.1, 0.5)
+#    figure_6_3(0.1,  0.1, 0.5)
+#    figure_6_3(0.05, 0.1, 0.5)
+#    figure_6_3(0,    0.1, 0.5)
 #    leg = ["eps = 0.2", "eps = 0.1", "eps = 0.05", "eps = 0"]
 #    plt.figure(1)
 #    plt.legend(leg)
@@ -197,11 +193,28 @@ if __name__ == '__main__':
 #    plt.figure(2).clear()
 
     # Experiment with various values of the noise/uncertainty parameter
-    figure_6_3(0.1, 0.2)
-    figure_6_3(0.1, 0.1)
-    figure_6_3(0.1, 0.05)
-    figure_6_3(0.1, 0)
-    leg = ["noise = 0.2", "noise = 0.1", "noise = 0.05", "noise = 0"]
+#    figure_6_3(0.1, 0.2,  0.5)
+#    figure_6_3(0.1, 0.1,  0.5)
+#    figure_6_3(0.1, 0.05, 0.5)
+#    figure_6_3(0.1, 0,    0.5)
+#    leg = ["noise = 0.2", "noise = 0.1", "noise = 0.05", "noise = 0"]
+#    plt.figure(1)
+#    plt.legend(leg)
+#    plt.figure(2)
+#    plt.legend(leg)
+#    plt.show()
+
+    # reset plot
+#    plt.figure(1).clear()
+#    plt.figure(2).clear()
+
+# Experiment with various values of the alpha parameter
+    figure_6_3(0.1, 0.1,  0.7)
+    figure_6_3(0.1, 0.1,  0.6)
+    figure_6_3(0.1, 0.1,  0.5)
+    figure_6_3(0.1, 0.1,  0.4)
+    figure_6_3(0.1, 0.1,  0.3)
+    leg = ["alpha = 0.7", "alpha = 0.6", "alpha = 0.5", "alpha = 0.4", "alpha = 0.3"]
     plt.figure(1)
     plt.legend(leg)
     plt.figure(2)
