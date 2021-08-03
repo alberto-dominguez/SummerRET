@@ -11,9 +11,9 @@ import CurrentDynamics as cd
 
 # dimensions
 WORLD_HEIGHT = 10
-WORLD_WIDTH = 20
+WORLD_WIDTH = 2 * WORLD_HEIGHT
 SPACE_SCALE_FACTOR = 10
-TIME_SCALE_FACTOR = 20
+TIME_SCALE_FACTOR = 10
 
 # possible actions
 ACTION_SPACE_SIZE = 4
@@ -24,32 +24,35 @@ ROT_CCW = 3
 ACTIONS = [IDLE, MOVE_FWD, ROT_CW, ROT_CCW]
 
 # possible bearings
-NORTH = 0
-NE = 1
-EAST = 2
-SE = 3
-SOUTH = 4
-SW = 5
-WEST = 6
-NW = 7
+NORTH = 0  # 0
+NE = 1     # 45
+EAST = 2   # 90
+SE = 3     # 135
+SOUTH = 4  # 180
+SW = 5     # 225
+WEST = 6   # 270
+NW = 7     # 315
 
 # In nautical navigation the bearing is the cw angle from N; we will start with a N bearing
 # Start and goal positions of the agent
 START_BEARING = NORTH
 START = [0, 0, START_BEARING]
-GOAL = [9, 9, 0]
+GOAL = [9, 9, 0]  # The bearing at the goal is irrelevant
 
 
 # This function defines how the agent moves on the grid.
 # gremlin represents the probability that action is random
 # noise/uncertainty to account for unexpected disturbances, modeling error, and/or unknown dynamics
 def step(state, action, gremlin, time):
+
     i, j, bearing = state
     CURR_X, CURR_Y = cd.double_gyre(time)
     dx = int(CURR_X[i][j] * SPACE_SCALE_FACTOR)
     dy = int(CURR_Y[i][j] * SPACE_SCALE_FACTOR)
+
     if np.random.binomial(1, gremlin) == 1:
         action = np.random.choice(ACTIONS)
+
     if action == ROT_CW:
         bearing  = (bearing + 1) % 8
         return [max(min(i + dx, WORLD_HEIGHT - 1), 0), max(min(j + dy, WORLD_WIDTH - 1), 0), bearing]
@@ -64,7 +67,7 @@ def step(state, action, gremlin, time):
         elif bearing == NE:
             return [max(min(i - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j + 1 + dy, WORLD_WIDTH - 1), 0), bearing]
         elif bearing == EAST:
-            return [max(min(i + dx, WORLD_HEIGHT - 1), 0),     max(min(j + 1 + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(i     + dx, WORLD_HEIGHT - 1), 0), max(min(j + 1 + dy, WORLD_WIDTH - 1), 0), bearing]
         elif bearing == SE:
             return [max(min(i + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j + 1 + dy, WORLD_WIDTH - 1), 0), bearing]
         elif bearing == SOUTH:
@@ -209,11 +212,11 @@ if __name__ == '__main__':
 #    plt.figure(2).clear()
 
 # Experiment with various values of the alpha parameter
-    figure_6_3(0.1, 0.1,  0.7)
-    figure_6_3(0.1, 0.1,  0.6)
-    figure_6_3(0.1, 0.1,  0.5)
-    figure_6_3(0.1, 0.1,  0.4)
-    figure_6_3(0.1, 0.1,  0.3)
+    figure_6_3(0.1, 0.1, 0.7)
+    figure_6_3(0.1, 0.1, 0.6)
+    figure_6_3(0.1, 0.1, 0.5)
+    figure_6_3(0.1, 0.1, 0.4)
+    figure_6_3(0.1, 0.1, 0.3)
     leg = ["alpha = 0.7", "alpha = 0.6", "alpha = 0.5", "alpha = 0.4", "alpha = 0.3"]
     plt.figure(1)
     plt.legend(leg)

@@ -3,12 +3,18 @@ import numpy as np
 
 # constants
 PI = math.pi
-E = 0.25
-W = PI / 5
-A = 0.1
-WORLD_HEIGHT = 10
-WORLD_WIDTH = 20
+WORLD_HEIGHT = 20
+WORLD_WIDTH = 40
 SPACE_SCALE_FACTOR = 10
+
+# field parameters
+E = 0.25
+W = PI / 20
+A = 0.1
+
+# numerical differentiation constants
+delta = 0.0001
+dt = 0.1
 
 
 def a(t):
@@ -19,28 +25,25 @@ def b(t):
     return 1 - 2 * E * math.sin(W * t)
 
 
-def f(xx, t):
-    return a(t) * xx**2 + b(t) * xx
+def f(x, t):
+    return a(t) * x**2 + b(t) * x
 
 
-def u(xx, yy, t):
-    return PI * A * math.sin(PI*f(xx, t)) * math.cos(PI * yy)
+def velocity(x, y, t):
+    vx = -PI * A * math.sin(PI*f(x, t)) * math.cos(PI * y)
+    vy = -PI * A * math.cos(PI*f(x, t)) * math.sin(PI * y) * (2 * a(t) * x + b(t))
+    return vx, vy
 
 
-def v(xx, yy, t):
-    return -PI * A * math.cos(PI*f(xx, t)) * math.sin(PI * yy) * (2 * a(t) * xx + b(t))
-
-
-# create a double-gyre velocity field
+# create a double gyre velocity field
 # This function is intended to reproduce double gyre stream flow described on the LCS website
 # https://shaddenlab.berkeley.edu/uploads/LCS-tutorial/examples.html#Sec7.1
 def double_gyre(t):
     CURR_X = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=float)
     CURR_Y = np.zeros((WORLD_HEIGHT, WORLD_WIDTH), dtype=float)
-    for ii in range(0, WORLD_HEIGHT):
-        xv = ii / SPACE_SCALE_FACTOR
-        for jj in range(0, WORLD_WIDTH):
-            yv = jj / SPACE_SCALE_FACTOR
-            CURR_X[ii][jj] = v(xv, yv, t)
-            CURR_Y[ii][jj] = u(xv, yv, t)
+    for i in range(0, WORLD_HEIGHT):
+        x = i / SPACE_SCALE_FACTOR
+        for j in range(0, WORLD_WIDTH):
+            y = j / SPACE_SCALE_FACTOR
+            CURR_X[i][j], CURR_Y[i][j] = velocity(x, y, t)
     return CURR_X, CURR_Y
