@@ -1,18 +1,11 @@
-#####################################################################################################
-# Reinforcement Learning Using Unicycle Agent                                                       #
-#                                                                                                   #
-# Version history:                                                                                  #
-# ALD 31-JUL-2021 First version                                                                     #
-#####################################################################################################
-
 import numpy as np
+import pylab
 import matplotlib.pyplot as plt
-import CurrentDynamics as cd
+import doubleGyre as dg
 
 # dimensions
 WORLD_HEIGHT = 10
 WORLD_WIDTH = 2 * WORLD_HEIGHT
-SPACE_SCALE_FACTOR = 10
 TIME_SCALE_FACTOR = 10
 
 # possible actions
@@ -24,9 +17,9 @@ ROT_CCW = 3
 ACTIONS = [IDLE, MOVE_FWD, ROT_CW, ROT_CCW]
 
 # possible bearings
-NORTH = 0  # 0
-NE = 1     # 45
-EAST = 2   # 90
+NORTH = 0  #   0
+NE = 1     #  45
+EAST = 2   #  90
 SE = 3     # 135
 SOUTH = 4  # 180
 SW = 5     # 225
@@ -46,9 +39,10 @@ GOAL = [9, 9, 0]  # The bearing at the goal is irrelevant
 def step(state, action, gremlin, time):
 
     i, j, bearing = state
-    CURR_X, CURR_Y = cd.double_gyre(time)
-    dx = int(CURR_X[i][j] * SPACE_SCALE_FACTOR)
-    dy = int(CURR_Y[i][j] * SPACE_SCALE_FACTOR)
+    X, Y = pylab.meshgrid(np.arange(0, 2, 1 / dg.SPACE_SCALE_FACTOR), np.arange(0, 1, 1 / dg.SPACE_SCALE_FACTOR))
+    CURR_X, CURR_Y = dg.velocity(X, Y, time)
+    dx = int(CURR_X[i][j] * dg.SPACE_SCALE_FACTOR)
+    dy = int(CURR_Y[i][j] * dg.SPACE_SCALE_FACTOR)
 
     if np.random.binomial(1, gremlin) == 1:
         action = np.random.choice(ACTIONS)
@@ -130,7 +124,7 @@ def episode(q_value, eps, gremlin, alpha):
 
 def figure_6_3(eps, gremlin, alpha):
 
-    episode_limit = 300
+    episode_limit = 20
 
     q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, ACTION_SPACE_SIZE))
     steps = []
@@ -138,8 +132,6 @@ def figure_6_3(eps, gremlin, alpha):
     while ep < episode_limit:
         steps.append(episode(q_value, eps, gremlin, alpha))
         ep += 1
-        if ep % 10 == 0:
-            print(".", end="")
 
     steps = np.add.accumulate(steps)
     plt.figure(1)
@@ -156,22 +148,22 @@ def figure_6_3(eps, gremlin, alpha):
     plt.plot(np.arange(1, len(average_steps) + 1), average_steps)
 
     # display the optimal policy
-    optimal_policy = []
-    for i in range(0, WORLD_HEIGHT):
-        optimal_policy.append([])
-        for j in range(0, WORLD_WIDTH):
-            if i == GOAL[0] and j == GOAL[1]:
-                optimal_policy[-1].append('G ')
-                continue
-            bestAction = np.argmax(q_value[i, j, :])
-            if bestAction == MOVE_FWD:
-                optimal_policy[-1].append('F ')
-            elif bestAction == ROT_CW:
-                optimal_policy[-1].append('+ ')
-            elif bestAction == ROT_CCW:
-                optimal_policy[-1].append('- ')
-            else:  # bestAction == IDLE
-                optimal_policy[-1].append('I ')
+#    optimal_policy = []
+#    for i in range(0, WORLD_HEIGHT):
+#        optimal_policy.append([])
+#        for j in range(0, WORLD_WIDTH):
+#            if i == GOAL[0] and j == GOAL[1]:
+#                optimal_policy[-1].append('G ')
+#                continue
+#            bestAction = np.argmax(q_value[i, j, :])
+#            if bestAction == MOVE_FWD:
+#                optimal_policy[-1].append('F ')
+#            elif bestAction == ROT_CW:
+#                optimal_policy[-1].append('+ ')
+#            elif bestAction == ROT_CCW:
+#                optimal_policy[-1].append('- ')
+#            else:  # bestAction == IDLE
+#                optimal_policy[-1].append('I ')
 #    print('Optimal policy when epsilon equals', eps, 'and the random dynamics parameter equals', gremlin, 'is:')
 #    for row in optimal_policy:
 #        print(row)
@@ -180,38 +172,38 @@ def figure_6_3(eps, gremlin, alpha):
 if __name__ == '__main__':
 
     # Experiment with various values of epsilon in the epsilon-greedy algorithm
-#    figure_6_3(0.2,  0.1, 0.5)
-#    figure_6_3(0.1,  0.1, 0.5)
-#    figure_6_3(0.05, 0.1, 0.5)
-#    figure_6_3(0,    0.1, 0.5)
-#    leg = ["eps = 0.2", "eps = 0.1", "eps = 0.05", "eps = 0"]
-#    plt.figure(1)
-#    plt.legend(leg)
-#    plt.figure(2)
-#    plt.legend(leg)
-#    plt.show()
+    figure_6_3(0.2,  0.1, 0.5)
+    figure_6_3(0.1,  0.1, 0.5)
+    figure_6_3(0.05, 0.1, 0.5)
+    figure_6_3(0,    0.1, 0.5)
+    leg = ["eps = 0.2", "eps = 0.1", "eps = 0.05", "eps = 0"]
+    plt.figure(1)
+    plt.legend(leg)
+    plt.figure(2)
+    plt.legend(leg)
+    plt.show()
 
     # reset plot
-#    plt.figure(1).clear()
-#    plt.figure(2).clear()
+    plt.figure(1).clear()
+    plt.figure(2).clear()
 
     # Experiment with various values of the noise/uncertainty parameter
-#    figure_6_3(0.1, 0.2,  0.5)
-#    figure_6_3(0.1, 0.1,  0.5)
-#    figure_6_3(0.1, 0.05, 0.5)
-#    figure_6_3(0.1, 0,    0.5)
-#    leg = ["noise = 0.2", "noise = 0.1", "noise = 0.05", "noise = 0"]
-#    plt.figure(1)
-#    plt.legend(leg)
-#    plt.figure(2)
-#    plt.legend(leg)
-#    plt.show()
+    figure_6_3(0.1, 0.2,  0.5)
+    figure_6_3(0.1, 0.1,  0.5)
+    figure_6_3(0.1, 0.05, 0.5)
+    figure_6_3(0.1, 0,    0.5)
+    leg = ["noise = 0.2", "noise = 0.1", "noise = 0.05", "noise = 0"]
+    plt.figure(1)
+    plt.legend(leg)
+    plt.figure(2)
+    plt.legend(leg)
+    plt.show()
 
     # reset plot
-#    plt.figure(1).clear()
-#    plt.figure(2).clear()
+    plt.figure(1).clear()
+    plt.figure(2).clear()
 
-# Experiment with various values of the alpha parameter
+    # Experiment with various values of the alpha parameter
     figure_6_3(0.1, 0.1, 0.7)
     figure_6_3(0.1, 0.1, 0.6)
     figure_6_3(0.1, 0.1, 0.5)
