@@ -1,12 +1,20 @@
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 import numpy as np
 import pylab
-import matplotlib.pyplot as plt
-import doubleGyre as dg
+from scipy.io import loadmat
+
+# import ROMS data (MATLAB .MAT format)
+# Contains UU and VV structures, each with dimensions Time x Depth x Latitude x Longitude
+roms = loadmat('UUVV711b.mat')
+vx = roms['UU']
+vy = roms['VV']
 
 # dimensions
-WORLD_HEIGHT = 10
-WORLD_WIDTH = 2 * WORLD_HEIGHT
-TIME_SCALE_FACTOR = 10
+WORLD_HEIGHT = 21
+WORLD_WIDTH = 28
+TIME_RANGE = 384
+N = 1
 
 # possible actions
 ACTION_SPACE_SIZE = 4
@@ -38,40 +46,41 @@ GOAL = [9, 9, 0]  # The bearing at the goal is irrelevant
 # noise/uncertainty to account for unexpected disturbances, modeling error, and/or unknown dynamics
 def step(state, action, gremlin, time):
 
-    i, j, bearing = state
-    X, Y = pylab.meshgrid(np.arange(0, 2, 1 / dg.SPACE_SCALE_FACTOR), np.arange(0, 1, 1 / dg.SPACE_SCALE_FACTOR))
-    CURR_X, CURR_Y = dg.velocity(X, Y, time)
-    dx = int(CURR_X[i][j] * dg.SPACE_SCALE_FACTOR)
-    dy = int(CURR_Y[i][j] * dg.SPACE_SCALE_FACTOR)
+    x, y, bearing = state
+    t = time % TIME_RANGE
+    CURR_X = vx[t, 0, x, y]
+    CURR_Y = vy[t, 0, x, y]
+    dx = int(CURR_X)
+    dy = int(CURR_Y)
 
     if np.random.binomial(1, gremlin) == 1:
         action = np.random.choice(ACTIONS)
 
     if action == ROT_CW:
         bearing  = (bearing + 1) % 8
-        return [max(min(i + dx, WORLD_HEIGHT - 1), 0), max(min(j + dy, WORLD_WIDTH - 1), 0), bearing]
+        return [max(min(x + dx, WORLD_HEIGHT - 1), 0), max(min(y + dy, WORLD_WIDTH - 1), 0), bearing]
     elif action == ROT_CCW:
         bearing  = (bearing - 1) % 8
-        return [max(min(i + dx, WORLD_HEIGHT - 1), 0), max(min(j + dy, WORLD_WIDTH - 1), 0), bearing]
+        return [max(min(x + dx, WORLD_HEIGHT - 1), 0), max(min(y + dy, WORLD_WIDTH - 1), 0), bearing]
     elif action == IDLE:
-        return [max(min(i + dx, WORLD_HEIGHT - 1), 0), max(min(j + dy, WORLD_WIDTH - 1), 0), bearing]
+        return [max(min(x + dx, WORLD_HEIGHT - 1), 0), max(min(y + dy, WORLD_WIDTH - 1), 0), bearing]
     else:  # action == MOVE_FWD
         if bearing == NORTH:
-            return [max(min(i - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j     + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y     + dy, WORLD_WIDTH - 1), 0), bearing]
         elif bearing == NE:
-            return [max(min(i - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j + 1 + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y + 1 + dy, WORLD_WIDTH - 1), 0), bearing]
         elif bearing == EAST:
-            return [max(min(i     + dx, WORLD_HEIGHT - 1), 0), max(min(j + 1 + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x     + dx, WORLD_HEIGHT - 1), 0), max(min(y + 1 + dy, WORLD_WIDTH - 1), 0), bearing]
         elif bearing == SE:
-            return [max(min(i + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j + 1 + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y + 1 + dy, WORLD_WIDTH - 1), 0), bearing]
         elif bearing == SOUTH:
-            return [max(min(i + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j     + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y     + dy, WORLD_WIDTH - 1), 0), bearing]
         elif bearing == SW:
-            return [max(min(i + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j - 1 + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y - 1 + dy, WORLD_WIDTH - 1), 0), bearing]
         elif bearing == WEST:
-            return [max(min(i     + dx, WORLD_HEIGHT - 1), 0), max(min(j - 1 + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x     + dx, WORLD_HEIGHT - 1), 0), max(min(y - 1 + dy, WORLD_WIDTH - 1), 0), bearing]
         elif bearing == NW:
-            return [max(min(i - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(j - 1 + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y - 1 + dy, WORLD_WIDTH - 1), 0), bearing]
 
 
 # play for an episode, return amount of time spent in the episode
@@ -100,8 +109,7 @@ def episode(q_value, eps, gremlin, alpha):
     # keep going until get to the goal state
     while state[0] != GOAL[0] or state[1] != GOAL[1]:  # bearing doesn't matter if we arrived at the goal cell
         # determine the next state
-        t = time / TIME_SCALE_FACTOR
-        next_state = step(state, action, gremlin, t)
+        next_state = step(state, action, gremlin, time)
         # choose the next action based on epsilon-greedy algorithm
         if np.random.binomial(1, eps) == 1:
             next_action = np.random.choice(ACTIONS)
@@ -109,7 +117,7 @@ def episode(q_value, eps, gremlin, alpha):
             values_ = q_value[next_state[0], next_state[1], :]
             next_action = np.random.choice(
                 [action_ for action_, value_ in enumerate(values_) if value_ == np.max(values_)])
-        # Sarsa update - For more info about Sarsa algorithm, please refer to p. 129 of the textbook.
+        # SARSA update - For more info about SARSA algorithm, please refer to p. 129 of the S&B textbook.
         reward = -1
         q_value[state[0], state[1], action] = q_value[state[0], state[1], action] + alpha * (
                     reward + q_value[next_state[0], next_state[1], next_action] -
@@ -124,7 +132,7 @@ def episode(q_value, eps, gremlin, alpha):
 
 def figure_6_3(eps, gremlin, alpha):
 
-    episode_limit = 20
+    episode_limit = 2000
 
     q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, ACTION_SPACE_SIZE))
     steps = []
@@ -169,7 +177,48 @@ def figure_6_3(eps, gremlin, alpha):
 #        print(row)
 
 
+# animation of the time-dependent vector field
+def animate(t, Q, X, Y, C, R, N):
+    VX = vx[t, 0, :, :]
+    VY = vy[t, 0, :, :]
+    Q.set_UVC(VX, VY)
+    return Q
+
+
+def create_gif(ind, depth):
+
+    # create the 2D mesh grid with its corresponding vector field
+    fig, ax = pylab.subplots(1, 1, figsize=(10, 5))
+    C = np.empty([1], pylab.Circle)
+    R = np.empty([1, 2], float)
+    X, Y = pylab.meshgrid(np.arange(0, WORLD_HEIGHT, 1), np.arange(0, WORLD_WIDTH, 1))
+    VX = vx[0, ind, :, :]
+    VY = vy[0, ind, :, :]
+    Q = ax.quiver(VX, VY)
+
+    # initialize particle (particle won't move, at least initially)
+    C = np.empty([1], pylab.Circle)
+    C[0] = pylab.Circle((-1, -1), radius=0.02)
+    R = np.empty([1, 2], float)
+    R[0][0] = 0
+    R[0][1] = 0
+    C[0].center = (R[0][0], R[0][1])
+    ax.add_patch(C[0])
+
+    # run animation
+    ani = animation.FuncAnimation(fig, animate, frames=350, fargs=(Q, X, Y, C, R, N), interval=100, blit=False)
+    plt.title("ROMS current field at depth = " + str(depth) + " meters as a function of time")
+    filename = "animation_roms_" + str(depth) + ".gif"
+    ani.save(filename, writer=animation.PillowWriter(fps=30))
+    plt.show()
+
+
 if __name__ == '__main__':
+
+    # Create GIF of current field at various depths
+#    depths = [0, 5, 10, 15, 20, 30, 40, 50, 60, 75, 100, 125]
+#    for i in range(0, len(depths)):
+#        create_gif(i, depths[i])
 
     # Experiment with various values of epsilon in the epsilon-greedy algorithm
     figure_6_3(0.2,  0.1, 0.5)
