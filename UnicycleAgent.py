@@ -17,12 +17,14 @@ TIME_RANGE = 384
 N = 1
 
 # possible actions
-ACTION_SPACE_SIZE = 4
+ACTION_SPACE_SIZE = 6
 IDLE = 0
 MOVE_FWD = 1
 ROT_CW = 2
 ROT_CCW = 3
-ACTIONS = [IDLE, MOVE_FWD, ROT_CW, ROT_CCW]
+ASCEND = 4
+DESCEND = 5
+ACTIONS = [IDLE, MOVE_FWD, ROT_CW, ROT_CCW, ASCEND, DESCEND]
 
 # possible bearings
 NORTH = 0  #   0
@@ -34,11 +36,17 @@ SW = 5     # 225
 WEST = 6   # 270
 NW = 7     # 315
 
+# possible depths
+# index 0 1  2  3  4  5  6  7  8  9  10  11
+# depth 0 5 10 15 20 30 40 50 60 75 100 125
+DEPTH_COUNT = 12
+
 # In nautical navigation the bearing is the cw angle from N; we will start with a N bearing
 # Start and goal positions of the agent
+# A state is defined as (x, y, depth, bearing)
 START_BEARING = NORTH
-START = [0, 0, START_BEARING]
-GOAL = [9, 9, 0]  # The bearing at the goal is irrelevant
+START = [0, 0, 0, START_BEARING]
+GOAL = [9, 9, 0, 0]  # The bearing at the goal is irrelevant
 
 
 # This function defines how the agent moves on the grid.
@@ -46,7 +54,7 @@ GOAL = [9, 9, 0]  # The bearing at the goal is irrelevant
 # noise/uncertainty to account for unexpected disturbances, modeling error, and/or unknown dynamics
 def step(state, action, gremlin, time):
 
-    x, y, bearing = state
+    x, y, depth, bearing = state
     t = time % TIME_RANGE
     CURR_X = vx[t, 0, x, y]
     CURR_Y = vy[t, 0, x, y]
@@ -56,31 +64,39 @@ def step(state, action, gremlin, time):
     if np.random.binomial(1, gremlin) == 1:
         action = np.random.choice(ACTIONS)
 
-    if action == ROT_CW:
+    if action == DESCEND:
+        # descending (going to larger depth) means incrementing the array index
+        depth = max(min(depth + 1, DEPTH_COUNT - 1), 0)
+        return [max(min(x + dx, WORLD_HEIGHT - 1), 0), max(min(y + dy, WORLD_WIDTH - 1), 0), depth, bearing]
+    elif action == ASCEND:
+        # ascending (going to smaller depth) means decrementing the array index
+        depth = max(min(depth - 1, DEPTH_COUNT - 1), 0)
+        return [max(min(x + dx, WORLD_HEIGHT - 1), 0), max(min(y + dy, WORLD_WIDTH - 1), 0), depth, bearing]
+    elif action == ROT_CW:
         bearing  = (bearing + 1) % 8
-        return [max(min(x + dx, WORLD_HEIGHT - 1), 0), max(min(y + dy, WORLD_WIDTH - 1), 0), bearing]
+        return [max(min(x + dx, WORLD_HEIGHT - 1), 0), max(min(y + dy, WORLD_WIDTH - 1), 0), depth, bearing]
     elif action == ROT_CCW:
         bearing  = (bearing - 1) % 8
-        return [max(min(x + dx, WORLD_HEIGHT - 1), 0), max(min(y + dy, WORLD_WIDTH - 1), 0), bearing]
+        return [max(min(x + dx, WORLD_HEIGHT - 1), 0), max(min(y + dy, WORLD_WIDTH - 1), 0), depth, bearing]
     elif action == IDLE:
-        return [max(min(x + dx, WORLD_HEIGHT - 1), 0), max(min(y + dy, WORLD_WIDTH - 1), 0), bearing]
+        return [max(min(x + dx, WORLD_HEIGHT - 1), 0), max(min(y + dy, WORLD_WIDTH - 1), 0), depth, bearing]
     else:  # action == MOVE_FWD
         if bearing == NORTH:
-            return [max(min(x - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y     + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y     + dy, WORLD_WIDTH - 1), 0), depth, bearing]
         elif bearing == NE:
-            return [max(min(x - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y + 1 + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y + 1 + dy, WORLD_WIDTH - 1), 0), depth, bearing]
         elif bearing == EAST:
-            return [max(min(x     + dx, WORLD_HEIGHT - 1), 0), max(min(y + 1 + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x     + dx, WORLD_HEIGHT - 1), 0), max(min(y + 1 + dy, WORLD_WIDTH - 1), 0), depth, bearing]
         elif bearing == SE:
-            return [max(min(x + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y + 1 + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y + 1 + dy, WORLD_WIDTH - 1), 0), depth, bearing]
         elif bearing == SOUTH:
-            return [max(min(x + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y     + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y     + dy, WORLD_WIDTH - 1), 0), depth, bearing]
         elif bearing == SW:
-            return [max(min(x + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y - 1 + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x + 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y - 1 + dy, WORLD_WIDTH - 1), 0), depth, bearing]
         elif bearing == WEST:
-            return [max(min(x     + dx, WORLD_HEIGHT - 1), 0), max(min(y - 1 + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x     + dx, WORLD_HEIGHT - 1), 0), max(min(y - 1 + dy, WORLD_WIDTH - 1), 0), depth, bearing]
         elif bearing == NW:
-            return [max(min(x - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y - 1 + dy, WORLD_WIDTH - 1), 0), bearing]
+            return [max(min(x - 1 + dx, WORLD_HEIGHT - 1), 0), max(min(y - 1 + dy, WORLD_WIDTH - 1), 0), depth, bearing]
 
 
 # play for an episode, return amount of time spent in the episode
@@ -118,6 +134,7 @@ def episode(q_value, eps, gremlin, alpha):
             next_action = np.random.choice(
                 [action_ for action_, value_ in enumerate(values_) if value_ == np.max(values_)])
         # SARSA update - For more info about SARSA algorithm, please refer to p. 129 of the S&B textbook.
+        # TODO - make reward function dependent on action taken to approximate energy expended
         reward = -1
         q_value[state[0], state[1], action] = q_value[state[0], state[1], action] + alpha * (
                     reward + q_value[next_state[0], next_state[1], next_action] -
@@ -189,8 +206,6 @@ def create_gif(ind, depth):
 
     # create the 2D mesh grid with its corresponding vector field
     fig, ax = pylab.subplots(1, 1, figsize=(10, 5))
-    C = np.empty([1], pylab.Circle)
-    R = np.empty([1, 2], float)
     X, Y = pylab.meshgrid(np.arange(0, WORLD_HEIGHT, 1), np.arange(0, WORLD_WIDTH, 1))
     VX = vx[0, ind, :, :]
     VY = vy[0, ind, :, :]
@@ -209,7 +224,7 @@ def create_gif(ind, depth):
     ani = animation.FuncAnimation(fig, animate, frames=350, fargs=(Q, X, Y, C, R, N), interval=100, blit=False)
     plt.title("ROMS current field at depth = " + str(depth) + " meters as a function of time")
     filename = "animation_roms_" + str(depth) + ".gif"
-    ani.save(filename, writer=animation.PillowWriter(fps=30))
+    ani.save(filename, writer=animation.PillowWriter(fps=30))  # ignore compiler warning; PillowWriter works correctly
     plt.show()
 
 
